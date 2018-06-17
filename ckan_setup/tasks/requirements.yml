@@ -1,0 +1,37 @@
+---
+- name: Ensure that docker-compose has been installed via pip
+  pip:
+    name: 'docker-compose'
+    state: latest
+  become: yes
+  become_method: sudo
+  tags: [install,configure]
+
+- name: Install goodies for Debian
+  apt: name={{ item }} update_cache=yes
+  with_items:
+      - wget
+      - gcc
+      - python-dev
+      - build-essential
+      - unzip
+      - ruby
+      - ruby-dev
+      - git
+  become: yes
+  become_method: sudo
+  tags: [install,provision]
+
+- name: copy ssh config for GIT
+  template: src='ssh_config' dest='/home/{{ansible_user}}/.ssh/config' owner={{ansible_user}} group={{ansible_user}} mode=0600
+  become: yes
+  become_method: sudo
+  tags: [setup,provision]
+
+- name: Create local work space {{LOCAL_WS}}
+  file: path={{LOCAL_WS}} state=directory
+  mode: 0777
+  owner: "{{ ansible_user }}"
+  group: "{{ ansible_user }}"
+  become: yes
+  become_method: sudo

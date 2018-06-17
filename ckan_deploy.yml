@@ -1,0 +1,10 @@
+---
+- name: Deploying Jenkins Master
+  hosts: '{{ target }}'
+  gather_facts: true
+  vars:
+     target: all-nodes
+  roles:
+     - { role: javaUpgrade }
+     - { role: docker_setup }
+     - { role: ckan_deploy }

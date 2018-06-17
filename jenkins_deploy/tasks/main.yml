@@ -1,0 +1,40 @@
+---
+- name: Pull Jenkins image
+  docker_image:
+    name: jenkinsci/blueocean
+  become_method: sudo
+  tags: [install]
+
+- name: Create a Jenkins container
+  docker_container:
+    name: jenkins
+    image: jenkinsci/blueocean
+    user: root
+    published_ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - "jenkins-data:/var/jenkins_home"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+  register: container_result
+
+- name: Ensure jenkins home dir is created
+  file:
+    path: "{{ jenkins_home }}"
+    mode: 0777
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    state: directory
+  become_method: sudo
+  tags: [install]
+
+- pause:
+    seconds: 45
+  when: container_result|changed
+
+- name: check that we can ping jenkins on all its ports
+  uri: url=http://{{hostvars[inventory_hostname].host}}:{{ item }}
+  with_items:
+    - 8080
+    - 50000
+  tags: [setup]

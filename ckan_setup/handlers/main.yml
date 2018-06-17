@@ -1,0 +1,7 @@
+---
+# handlers file for ckan restart
+- name: restart ckan
+  become: true
+  command: docker-compose restart ckan
+  chdir: {{BUILD_WS}}
+  become_user: sudo

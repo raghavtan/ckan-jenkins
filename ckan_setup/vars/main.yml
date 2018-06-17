@@ -1,0 +1,5 @@
+MOUNT_DIR: /var/lib/docker
+DEVICE_BLOCK: xvdb
+LOCAL_WS: /opt/ckan
+BUILD_WS: /opt/ckan/contrib/docker
+ADMIN_USER: admin

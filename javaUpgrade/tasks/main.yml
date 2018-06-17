@@ -1,0 +1,61 @@
+---
+- include_vars: java_inventory.yml
+  tags: [always]
+
+- name: install wget
+  yum:
+      name: wget
+      state: present
+      update_cache: yes
+  become: yes
+  become_method: sudo
+  tags: [always]
+
+- name: Download Java
+  command: 'wget -q -O {{java_archive}} -c --header "Cookie: oraclelicense=accept-securebackup-cookie" {{download_url}}'
+  sudo: yes
+  tags: [always]
+
+- name: Unpack archive
+  command: "tar -zxf {{java_archive}} -C {{download_folder}}"
+  sudo: yes
+  tags: [always]
+
+- name: Fix ownership
+  file: state=directory path={{java_name}} owner=root group=root recurse=yes
+  sudo: yes
+  tags: [always]
+
+- name: Make Java available for system
+  alternatives: name=java
+                path={{java_name}}/bin/java
+                link=/usr/bin/java
+  sudo: yes
+  tags: [always]
+
+- name: Set Default Java
+  command: 'update-alternatives --set java "{{java_name}}/bin/java"'
+  sudo: yes
+  when: ansible_os_family | lower == 'debian'
+  tags: [always]
+
+
+- name: Set Default Java
+  command: 'alternatives --set java "{{java_name}}/bin/java"'
+  sudo: yes
+  when: ansible_os_family | lower == 'redhat'
+  tags: [always]
+
+
+- name: Clean up
+  file: state=absent path={{java_archive}}
+  sudo: yes
+  tags: [always]
+
+- name: set JAVA_HOME
+  shell: "export JAVA_HOME='{{ java_name }}'"
+  tags: [always]
+
+- name: Append PATH with JAVA_HOME
+  shell: "export PATH=$JAVA_HOME'/bin:'$PATH"
+  tags: [always]

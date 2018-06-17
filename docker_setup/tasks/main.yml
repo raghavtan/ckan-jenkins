@@ -1,0 +1,49 @@
+---
+- name: if debian, include family specific task file
+  include: "debian/main.yml"
+  when: ansible_os_family | lower == 'debian'
+  tags: [install,setup]
+
+- name: if redhat, include family specific task file
+  include: "redhat/main.yml"
+  when: ansible_os_family | lower == 'redhat'
+  tags: [install,setup]
+
+- name: Adding existing user '{{ ansible_user }}' to group Docker
+  user: name='{{ ansible_user }}'
+        groups=docker
+        append=yes
+  become: yes
+  become_method: sudo
+  tags: [install,configure]
+
+- name: ensure docker service is started and enabled
+  service:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  with_items:
+    - docker
+  become: yes
+  become_method: sudo
+  tags: [install,configure]
+
+- name: Downloading pip
+  get_url: url="https://bootstrap.pypa.io/get-pip.py" dest="/tmp/get-pip.py"
+  become: yes
+  become_method: sudo
+  tags: [install,configure]
+
+- name: Installing pip
+  shell: python /tmp/get-pip.py
+  become: yes
+  become_method: sudo
+  tags: [install,configure]
+
+- name: ensure that docker-py client library has been installed via pip
+  pip:
+    name: 'docker-py==1.9.0'
+    state: latest
+  become: yes
+  become_method: sudo
+  tags: [install,configure]

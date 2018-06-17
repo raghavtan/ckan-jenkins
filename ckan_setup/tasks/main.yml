@@ -1,0 +1,85 @@
+---
+- include: volume.yml
+  tags: [volume]
+
+- include: requirements.yml
+  tags: [install]
+
+- name: "Clone Repo into {{ LOCAL_WS }}"
+  git:
+    repo: 'git@github.com:ckan/ckan.git'
+    dest: '{{ LOCAL_WS }}/ckan'
+    force: yes
+    accept_hostkey: yes
+    key_file: '~/.ssh/id_rsa_git'
+    version: 'ckan-2.8.0'
+  become: yes
+  become_user: sudo
+  tags: [install,provision]
+
+- name: Copy a env file on the remote machine
+  copy:
+    src: '{{ LOCAL_WS }}/ckan/contrib/docker/.env.template'
+    dest: '{{ LOCAL_WS }}/ckan/contrib/docker/.env'
+    remote_src: yes
+  become: yes
+  become_user: sudo
+  tags: [install,provision]
+
+- name: Build CKAN images
+  shell: "docker-compose up -d --build"
+    args:
+    chdir: '{{BUILD_WS}}'
+  become: true
+  become_user: sudo
+  tags: [install,provision]
+
+
+- name: Get Volume paths
+  shell: "docker volume inspect docker_ckan_home | jq -r -c '.[] | .Mountpoint'"
+  register: VOL_CKAN_HOME
+  tags: [install,configure]
+
+- name: Get Volume paths
+  shell: "docker volume inspect docker_ckan_config | jq -r -c '.[] | .Mountpoint'"
+  register: VOL_CKAN_CONFIG
+  tags: [install,configure]
+
+- name: Get Volume paths
+  shell: "docker volume inspect docker_ckan_storage | jq -r -c '.[] | .Mountpoint'"
+  register: VOL_CKAN_STORAGE
+  tags: [install,configure]
+
+- name: Create datastore database and database users
+  shell: "{{item}}"
+    chdir: '{{BUILD_WS}}'
+  become: true
+  become_user: sudo
+  with_items:
+      - "docker exec -it db psql -U ckan -f 00_create_datastore.sh"
+      - "docker exec ckan /usr/local/bin/ckan-paster --plugin=ckan datastore set-permissions -c /etc/ckan/production.ini | docker exec -i db psql -U ckan"
+  tags: [install,configure]
+
+
+- name: Enable datastore and datapusher in production.ini
+  ini_file:
+    path: '{{VOL_CKAN_CONFIG.stdout}}/production.ini'
+    section: {{item.section}}
+    option: {{item.option}}
+    value: {{item.value}}
+  with_items:
+    - {"section":"ckan",       "option":"plugin",   "value":"datastore,datapusher" }
+    - {"section":"datapusher", "option":"formats",  "value":"Enable"               }
+  become: true
+  become_user: sudo
+  tags: [install,configure]
+  notify: restart ckan
+
+- meta: flush_handlers
+
+- name: Create datastore database and database users
+  shell: "docker exec -it ckan /usr/local/bin/ckan-paster --plugin=ckan sysadmin -c /etc/ckan/production.ini add {{ADMIN_USER}}"
+    chdir: '{{BUILD_WS}}'
+  become: true
+  become_user: sudo
+  tags: [install,configure]

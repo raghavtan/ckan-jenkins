@@ -1,0 +1,21 @@
+---
+- name: Add Docker key
+  apt_key: url={{URL_UBUNTU_DOCKER_KEY}}
+  become: true
+  become_method: sudo
+  tags: [install,setup]
+
+- name:    Add Docker APT repository
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
+  become: true
+  become_method: sudo
+  tags: [install,setup]
+
+- name: Install Docker
+  become: true
+  become_method: sudo
+  apt: name={{ item }} update_cache=yes
+  with_items:
+      - docker-ce
+  tags: [install,setup]

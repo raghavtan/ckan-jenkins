@@ -1,0 +1,29 @@
+---
+- name: Format /dev/{{DEVICE_BLOCK}} as ext4
+  command: mkfs -t ext4 /dev/{{DEVICE_BLOCK}}
+  become: yes
+  become_method: sudo
+
+- name: Create Mount Dir {{MOUNT_DIR}}
+  file: path={{MOUNT_DIR}} state=directory
+  become: yes
+  become_method: sudo
+
+- name: Getting UUID of Device Block /dev/{{DEVICE_BLOCK}}
+  shell: ls -al /dev/disk/by-uuid/ | grep {{DEVICE_BLOCK}} | awk '{print $9}'
+  register: UUID
+  become: yes
+  become_method: sudo
+
+- name: Adding mount point to /etc/fstab
+  lineinfile:
+    line: 'UUID={{UUID.stdout}} {{MOUNT_DIR}} ext4  defaults,nofail 0 2'
+    dest: '/etc/fstab'
+    regexp: '^/dev/{{DEVICE_BLOCK}}'
+  become: yes
+  become_method: sudo
+
+- name: Mounting /dev/{{DEVICE_BLOCK}} as {{MOUNT_DIR}}
+  command: mount -a
+  become: yes
+  become_method: sudo
