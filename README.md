@@ -40,5 +40,5 @@ This can also be automated as part of ansibl-ized process
 ```
 E.g.
 ```
-ansible-playbook ckan_deploy.yml -e "target=ckan.master"  -t install,setup
+ansible-playbook ckan_deploy.yml -e "target=ckan.master"  -t install,volume
 ```
